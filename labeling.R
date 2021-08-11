@@ -65,6 +65,8 @@ rownames(labels) <- labels[,2]
 gc.combined.seurat[["cluster_cell.type"]] <- NA
 gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
             labels[as.character(gc.combined.seurat@meta.data$seurat_clusters),1]
+gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
+                            "cluster_cell.type"] <- NA
 
 pdf("cluster/umap reference.pdf")
 DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
@@ -78,6 +80,16 @@ pdf("cluster/umap cluster.pdf", width=14)
 DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
   label=T, repel=T)
 dev.off()
+
+#how many cells didn't get labeled
+ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata" & 
+                  is.na(gc.combined.seurat$cluster_cell.type)]) /
+  ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata"])
+
+saveRDS(gc.combined.seurat, "limma.regressed.mnn.integrated.seurat.rds")
+
+
+#dist order
 
 
 
