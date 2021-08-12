@@ -96,7 +96,7 @@ rownames(labeled) <- colnames(gc.combined.seurat[,gc.combined.seurat$
                               orig.ident=="gcdata"])
 names(labeled) <- "15k"
 
-saveRDS(gc.combined.seurat, "limma.regressed.mnn.integrated.seurat.rds")
+# saveRDS(gc.combined.seurat, "limma.regressed.mnn.integrated.seurat.rds")
 
 
 
@@ -104,10 +104,6 @@ saveRDS(gc.combined.seurat, "limma.regressed.mnn.integrated.seurat.rds")
 #try different parameters
 gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=10)
 gc.combined.seurat <- FindClusters(gc.combined.seurat)
-pdf("cluster/umap cluster 10k.pdf", width=14)
-DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
-  label=T, repel=T)
-dev.off()
 
 gc.reference.cluter.celltype <- subset(gc.combined.seurat, subset=orig.ident=="egc.data")@
                                       meta.data[,c("seurat_clusters","cell.type")]
@@ -127,6 +123,10 @@ gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
 gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
                             "cluster_cell.type"] <- NA
 
+pdf("cluster/umap cluster 10k.pdf", width=14)
+DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
 pdf("cluster/umap reference 10k.pdf")
 DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
   group.by="cell.type", label=T, repel=T)
@@ -150,10 +150,6 @@ labeled[,"10k"] <- gc.combined.seurat@meta.data[
 #try k.param=20
 gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=20)
 gc.combined.seurat <- FindClusters(gc.combined.seurat)
-pdf("cluster/umap cluster 20k.pdf", width=14)
-DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
-  label=T, repel=T)
-dev.off()
 
 gc.reference.cluter.celltype <- subset(gc.combined.seurat, subset=orig.ident=="egc.data")@
                                       meta.data[,c("seurat_clusters","cell.type")]
@@ -173,6 +169,10 @@ gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
 gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
                             "cluster_cell.type"] <- NA
 
+pdf("cluster/umap cluster 20k.pdf", width=14)
+DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
 pdf("cluster/umap reference 20k.pdf")
 DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
   group.by="cell.type", label=T, repel=T)
@@ -190,16 +190,13 @@ ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata" &
 labeled[,"20k"] <- gc.combined.seurat@meta.data[
                               gc.combined.seurat$orig.ident=="gcdata",
                             "cluster_cell.type"]
+#looks bad
 
 
 
 #try k.param=30
 gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=30)
 gc.combined.seurat <- FindClusters(gc.combined.seurat)
-pdf("cluster/umap cluster 30k.pdf", width=14)
-DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
-  label=T, repel=T)
-dev.off()
 
 gc.reference.cluter.celltype <- subset(gc.combined.seurat, subset=orig.ident=="egc.data")@
                                       meta.data[,c("seurat_clusters","cell.type")]
@@ -219,6 +216,10 @@ gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
 gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
                             "cluster_cell.type"] <- NA
 
+pdf("cluster/umap cluster 30k.pdf", width=14)
+DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
 pdf("cluster/umap reference 30k.pdf")
 DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
   group.by="cell.type", label=T, repel=T)
@@ -242,10 +243,6 @@ labeled[,"30k"] <- gc.combined.seurat@meta.data[
 #try k.param=25
 gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=25)
 gc.combined.seurat <- FindClusters(gc.combined.seurat)
-pdf("cluster/umap cluster 25k.pdf", width=14)
-DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
-  label=T, repel=T)
-dev.off()
 
 gc.reference.cluter.celltype <- subset(gc.combined.seurat, subset=orig.ident=="egc.data")@
                                       meta.data[,c("seurat_clusters","cell.type")]
@@ -265,6 +262,10 @@ gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
 gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
                             "cluster_cell.type"] <- NA
 
+pdf("cluster/umap cluster 25k.pdf", width=14)
+DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
 pdf("cluster/umap reference 25k.pdf")
 DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
   group.by="cell.type", label=T, repel=T)
@@ -282,16 +283,13 @@ ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata" &
 labeled[,"25k"] <- gc.combined.seurat@meta.data[
                               gc.combined.seurat$orig.ident=="gcdata",
                             "cluster_cell.type"]
+#looks bad
 
 
 
-#try k.param=22
-gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=22)
+#try k.param=13
+gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=13)
 gc.combined.seurat <- FindClusters(gc.combined.seurat)
-pdf("cluster/umap cluster 22k.pdf", width=14)
-DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
-  label=T, repel=T)
-dev.off()
 
 gc.reference.cluter.celltype <- subset(gc.combined.seurat, subset=orig.ident=="egc.data")@
                                       meta.data[,c("seurat_clusters","cell.type")]
@@ -311,11 +309,15 @@ gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
 gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
                             "cluster_cell.type"] <- NA
 
-pdf("cluster/umap reference 22k.pdf")
+pdf("cluster/umap cluster 13k.pdf", width=14)
+DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
+pdf("cluster/umap reference 13k.pdf")
 DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
   group.by="cell.type", label=T, repel=T)
 dev.off()
-pdf("cluster/umap query cluster 22k.pdf")
+pdf("cluster/umap query cluster 13k.pdf")
 DimPlot(subset(gc.combined.seurat, subset=orig.ident=="gcdata"), reduction="umap",
   group.by="cluster_cell.type", label=T, repel=T)
 dev.off()
@@ -323,9 +325,9 @@ dev.off()
 ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata" &
                   is.na(gc.combined.seurat$cluster_cell.type)]) /
   ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata"])
-#49% unlabeled cells
+#45% unlabeled cells
 
-labeled[,"22k"] <- gc.combined.seurat@meta.data[
+labeled[,"13k"] <- gc.combined.seurat@meta.data[
                               gc.combined.seurat$orig.ident=="gcdata",
                             "cluster_cell.type"]
 
@@ -334,10 +336,6 @@ labeled[,"22k"] <- gc.combined.seurat@meta.data[
 #try k.param=18
 gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=18)
 gc.combined.seurat <- FindClusters(gc.combined.seurat)
-pdf("cluster/umap cluster 18k.pdf", width=14)
-DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
-  label=T, repel=T)
-dev.off()
 
 gc.reference.cluter.celltype <- subset(gc.combined.seurat, subset=orig.ident=="egc.data")@
                                       meta.data[,c("seurat_clusters","cell.type")]
@@ -357,6 +355,10 @@ gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
 gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
                             "cluster_cell.type"] <- NA
 
+pdf("cluster/umap cluster 18k.pdf", width=14)
+DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
 pdf("cluster/umap reference 18k.pdf")
 DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
   group.by="cell.type", label=T, repel=T)
@@ -377,10 +379,150 @@ labeled[,"18k"] <- gc.combined.seurat@meta.data[
 
 
 
-labeled <- labeled[complete.cases(labeled),]
-consistent.labeled <- labeled[apply(labeled, 1, function(x){length(unique(x))==1}),]
-consistent.labels <- rownames(consistent.labeled)
+# #try different clustering with k.param=15
+# #resolution=0.8
+# gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=15)
+# gc.combined.seurat <- FindClusters(gc.combined.seurat, resolution=0.8)
+#
+# gc.reference.cluter.celltype <- subset(gc.combined.seurat, subset=orig.ident=="egc.data")@
+#                                       meta.data[,c("seurat_clusters","cell.type")]
+#
+# gc.reference.table <- as.data.frame(unclass(table(gc.reference.cluter.celltype$seurat_clusters,
+#   gc.reference.cluter.celltype$cell.type)))
+#
+# gc.reference.table <- apply(gc.reference.table, 1, function(x){x/sum(x)})
+# labels <- names(unlist(apply(gc.reference.table, 2, function(x){which(x>0.8)})))
+# labels <- data.frame(cluster_cell.type=gsub(".*\\.", "", labels),
+#                     clusters=gsub("\\..*", "", labels))
+# rownames(labels) <- labels[,2]
+#
+# gc.combined.seurat[["cluster_cell.type"]] <- NA
+# gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
+#             labels[as.character(gc.combined.seurat@meta.data$seurat_clusters),1]
+# gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
+#                             "cluster_cell.type"] <- NA
+#
+# pdf("cluster/umap cluster 15k0.8r.pdf", width=14)
+# DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
+#   label=T, repel=T)
+# dev.off()
+# pdf("cluster/umap reference 15k0.8r.pdf")
+# DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
+#   group.by="cell.type", label=T, repel=T)
+# dev.off()
+# pdf("cluster/umap query cluster 15k0.8r.pdf")
+# DimPlot(subset(gc.combined.seurat, subset=orig.ident=="gcdata"), reduction="umap",
+#   group.by="cluster_cell.type", label=T, repel=T)
+# dev.off()
+#
+# ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata" &
+#                   is.na(gc.combined.seurat$cluster_cell.type)]) /
+#   ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata"])
+# #38% unlabeled cells
+#
+# labeled[,"15k0.8r"] <- gc.combined.seurat@meta.data[
+#                               gc.combined.seurat$orig.ident=="gcdata",
+#                             "cluster_cell.type"]
+# #doesn't do anything
+#
+# #resolution=0.2
+# gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=15)
+# gc.combined.seurat <- FindClusters(gc.combined.seurat, resolution=0.2)
+#
+# gc.reference.cluter.celltype <- subset(gc.combined.seurat, subset=orig.ident=="egc.data")@
+#                                       meta.data[,c("seurat_clusters","cell.type")]
+#
+# gc.reference.table <- as.data.frame(unclass(table(gc.reference.cluter.celltype$seurat_clusters,
+#   gc.reference.cluter.celltype$cell.type)))
+#
+# gc.reference.table <- apply(gc.reference.table, 1, function(x){x/sum(x)})
+# labels <- names(unlist(apply(gc.reference.table, 2, function(x){which(x>0.8)})))
+# labels <- data.frame(cluster_cell.type=gsub(".*\\.", "", labels),
+#                     clusters=gsub("\\..*", "", labels))
+# rownames(labels) <- labels[,2]
+#
+# gc.combined.seurat[["cluster_cell.type"]] <- NA
+# gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
+#             labels[as.character(gc.combined.seurat@meta.data$seurat_clusters),1]
+# gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
+#                             "cluster_cell.type"] <- NA
+#
+# pdf("cluster/umap cluster 15k0.2r.pdf", width=14)
+# DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
+#   label=T, repel=T)
+# dev.off()
+# pdf("cluster/umap reference 15k0.2r.pdf")
+# DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
+#   group.by="cell.type", label=T, repel=T)
+# dev.off()
+# pdf("cluster/umap query cluster 15k0.2r.pdf")
+# DimPlot(subset(gc.combined.seurat, subset=orig.ident=="gcdata"), reduction="umap",
+#   group.by="cluster_cell.type", label=T, repel=T)
+# dev.off()
+#
+# ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata" &
+#                   is.na(gc.combined.seurat$cluster_cell.type)]) /
+#   ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata"])
+# #16% unlabeled cells
+#
+# labeled[,"15k0.2r"] <- gc.combined.seurat@meta.data[
+#                               gc.combined.seurat$orig.ident=="gcdata",
+#                             "cluster_cell.type"]
+# #doesn't look good
+#
+# #resolution=0.5
+# gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=15)
+# gc.combined.seurat <- FindClusters(gc.combined.seurat, resolution=0.5)
+#
+# gc.reference.cluter.celltype <- subset(gc.combined.seurat, subset=orig.ident=="egc.data")@
+#                                       meta.data[,c("seurat_clusters","cell.type")]
+#
+# gc.reference.table <- as.data.frame(unclass(table(gc.reference.cluter.celltype$seurat_clusters,
+#   gc.reference.cluter.celltype$cell.type)))
+#
+# gc.reference.table <- apply(gc.reference.table, 1, function(x){x/sum(x)})
+# labels <- names(unlist(apply(gc.reference.table, 2, function(x){which(x>0.8)})))
+# labels <- data.frame(cluster_cell.type=gsub(".*\\.", "", labels),
+#                     clusters=gsub("\\..*", "", labels))
+# rownames(labels) <- labels[,2]
+#
+# gc.combined.seurat[["cluster_cell.type"]] <- NA
+# gc.combined.seurat@meta.data[,"cluster_cell.type"] <-
+#             labels[as.character(gc.combined.seurat@meta.data$seurat_clusters),1]
+# gc.combined.seurat@meta.data[gc.combined.seurat$orig.ident=="egc.data",
+#                             "cluster_cell.type"] <- NA
+#
+# pdf("cluster/umap cluster 15k0.5r.pdf", width=14)
+# DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
+#   label=T, repel=T)
+# dev.off()
+# pdf("cluster/umap reference 15k0.5r.pdf")
+# DimPlot(subset(gc.combined.seurat, subset=orig.ident=="egc.data"), reduction="umap",
+#   group.by="cell.type", label=T, repel=T)
+# dev.off()
+# pdf("cluster/umap query cluster 15k0.5r.pdf")
+# DimPlot(subset(gc.combined.seurat, subset=orig.ident=="gcdata"), reduction="umap",
+#   group.by="cluster_cell.type", label=T, repel=T)
+# dev.off()
+#
+# ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata" &
+#                   is.na(gc.combined.seurat$cluster_cell.type)]) /
+#   ncol(gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata"])
+# #45% unlabeled cells
+#
+# labeled[,"15k0.5r"] <- gc.combined.seurat@meta.data[
+#                               gc.combined.seurat$orig.ident=="gcdata",
+#                             "cluster_cell.type"]
+# #doesn't look good either
 
+
+labeled <- labeled[,!colnames(labeled) %in% c("15k0.8r", "15k0.2r", "15k0.5r")]
+labeled.complete <- labeled[complete.cases(labeled),]
+consistent.labeled <- labeled.complete[apply(labeled.complete, 1,
+                                      function(x){length(unique(x))==1}),]
+consistent.labels <- rownames(consistent.labeled)
+length(consistent.labels)
+#13823
 #check the umap of cell which got consistent labels
 pdf("cluster/umap query consistent.pdf")
 DimPlot(gc.combined.seurat[,consistent.labels], reduction="umap",
