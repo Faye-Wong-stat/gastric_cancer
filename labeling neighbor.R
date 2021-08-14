@@ -27,6 +27,7 @@ gc.scaledata <- t(gc.scaledata)
 egc.scaledata <- t(egc.scaledata)
 
 distance <- cdist(gc.scaledata, egc.scaledata)
+write.csv(distance, "distance.csv")
 
 # #test
 # A <- matrix(c(0,0,2,2), byrow=T, nrow=2)
