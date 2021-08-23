@@ -12,41 +12,45 @@ library(scater)
 library(scPred)
 library(magrittr)
 library(doParallel)
+library(lattice)
 
-setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer/integrated/")
+setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer/integrated/scPred/")
 
-reference <- scPred::pbmc_1
-query <- scPred::pbmc_2
+gc.combined.seurat <- readRDS("../limma.regressed.mnn.integrated.seurat.rds")
 
-reference <- reference %>%
-  NormalizeData() %>%
-  FindVariableFeatures() %>%
-  ScaleData() %>%
-  RunPCA() %>%
-  RunUMAP(dims = 1:30)
+reference <- gc.combined.seurat[,gc.combined.seurat$orig.ident=="egc.data"]
+query <- gc.combined.seurat[,gc.combined.seurat$orig.ident=="gcdata"]
 
-pdf("scPred/umap reference by cell type.pdf")
-DimPlot(reference, group.by = "cell_type", label = TRUE, repel = TRUE)
+# reference <- reference %>%
+#   NormalizeData() %>%
+#   FindVariableFeatures() %>%
+#   ScaleData() %>%
+#   RunPCA() %>%
+#   RunUMAP(dims = 1:30)
+
+pdf("umap reference by cell type.pdf")
+DimPlot(reference, group.by = "cell.type", label = TRUE, repel = TRUE)
 dev.off()
 
-save.image("scPred/tutorial.RData")
-laod("scPred/tutorial.RData")
+
 
 #training
-reference <- getFeatureSpace(reference, "cell_type")
+reference <- getFeatureSpace(reference, "cell.type")
 reference <- trainModel(reference)
 get_probabilities(reference) %>% head()
 
 get_scpred(reference)
-pdf("scPred/predicted probability.pdf")
+pdf("predicted probability.pdf")
 plot_probabilities(reference)
 dev.off()
 
 reference <- trainModel(reference, model = "mda", reclassify = c("cMono", "ncMono"))
 get_scpred(reference)
-pdf("scPred/predicted probability new.pdf")
+pdf("predicted probability new.pdf")
 plot_probabilities(reference)
 dev.off()
+
+
 
 #classification
 query <- NormalizeData(query)

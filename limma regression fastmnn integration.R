@@ -154,10 +154,12 @@ gc.combined.seurat <- readRDS("../integrated/limma.regressed.mnn.integrated.seur
 
 #check markers and highly variable genes intersection
 #use new highly variable genes
-gc.selected.combined.seurat <- subset(gc.combined.seurat, idents=c("0","3","5","8","9","21"))
+gc.selected.combined.seurat <- subset(gc.combined.seurat,
+          idents=c("0","3","5","8","9","21","2","4","6","18","19"))
 
 gc.selected.combined.seurat.list <- SplitObject(gc.selected.combined.seurat,
   split.by="orig.ident")
+saveRDS(gc.selected.combined.seurat.list, "../integrated/limma.regressed.mnn.integrated.seurat.selected.list.rds")
 
 #find HVGs from the selected cells from both datasets
 for (i in 1:2){
@@ -173,6 +175,7 @@ shared.HVGs <- intersect(VariableFeatures(gc.selected.combined.seurat.list[[1]])
 gc.selected.combined.seurat <- RunPCA(gc.selected.combined.seurat, features=shared.HVGs)
 gc.selected.combined.seurat <- RunUMAP(gc.selected.combined.seurat, dims=1:50)
 
+saveRDS(gc.selected.combined.seurat, "../integrated/limma.regressed.mnn.integrated.seurat.selected.rds")
 
 pdf("../integration/regression and integration/umap seurat select.pdf")
 DimPlot(gc.selected.combined.seurat, reduction="umap", group.by="cell.type",

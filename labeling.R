@@ -520,8 +520,8 @@ labeled <- labeled[,!colnames(labeled) %in% c("15k0.8r", "15k0.2r", "15k0.5r")]
 labeled.complete <- labeled[complete.cases(labeled),]
 consistent.labeled <- labeled.complete[apply(labeled.complete, 1,
                                       function(x){length(unique(x))==1}),]
-consistent.labels <- rownames(consistent.labeled)
-length(consistent.labels)
+consistent.labels.cluster <- rownames(consistent.labeled)
+length(consistent.labels.cluster)
 #13823
 #check the umap of cell which got consistent labels
 pdf("cluster/umap query consistent.pdf")
