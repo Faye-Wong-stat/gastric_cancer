@@ -1,48 +1,38 @@
 library(tidyr)
 library(dplyr)
+library(plyr)
 library(Seurat)
 library(patchwork)
 library(reshape2)
 library(pheatmap)
 library(ggplot2)
+library(gridExtra)
+library(grid)
 library(limma)
 library(batchelor)
 library(scran)
 library(scater)
-library(Biocmanager)
+# library(Biocmanager)
 
 
 
 setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer/early gastric cancer")
-gc <- readRDS("../gc.rds")
-egc.annt <- readRDS("egc.annt.rds")
+#load corrected data
+gc.new <- readRDS("../integrated/gc.new.rds")
+egc.annt.new <- readRDS("../integrated/egc.annt.new.rds")
 
-
-
-#limma
-#regress out disease status, linear
-egc.annt@assays$RNA@scale.data <- removeBatchEffect(egc.annt@assays$RNA@data,
-                                                batch=egc.annt@meta.data$disease.status)
-
-gc@assays$RNA@scale.data <- removeBatchEffect(gc@assays$RNA@data,
-                                                batch=gc@meta.data$disease.status)
-
-#combine reference data with our data
-shared.gene <- intersect(VariableFeatures(gc), VariableFeatures(egc.annt))
-gc.new <- gc[shared.gene,]
-egc.annt.new <- egc.annt[shared.gene,]
-
-gc.new@assays$RNA@scale.data <- scale(gc.new@assays$RNA@scale.data)
-egc.annt.new@assays$RNA@scale.data <- scale(egc.annt.new@assays$RNA@scale.data)
-
+#combine two data sets
 gc.annt.combined.limma <- merge(gc.new, egc.annt.new)
+gc.annt.combined.limma@assays$RNA@data <- cbind(gc.new@assays$RNA@data,
+                                  egc.annt.new@assays$RNA@data[
+                                              rownames(gc.new@assays$RNA@data),])
 gc.annt.combined.limma@assays$RNA@scale.data <- cbind(gc.new@assays$RNA@scale.data,
-                                  egc.annt.new@assays$RNA@scale.data[rownames(gc.new@assays$RNA@scale.data),])
-
+                                  egc.annt.new@assays$RNA@scale.data[
+                                              rownames(gc.new@assays$RNA@scale.data),])
 
 #regress out dataset difference
-gc.annt.combined.limma@assays$RNA@scale.data <- removeBatchEffect(gc.annt.combined.limma@assays$RNA@scale.data,
-                                                batch=gc.annt.combined.limma@meta.data$orig.ident)
+gc.annt.combined.limma@assays$RNA@data <- removeBatchEffect(gc.annt.combined.limma@assays$RNA@data,
+                  batch=gc.annt.combined.limma@meta.data$orig.ident)
 
 # gc.annt.combined.limma <- FindVariableFeatures(gc.annt.combined.limma, nfeatures=2000)
 gc.annt.combined.limma <- RunPCA(gc.annt.combined.limma, npcs=40, verbose=F,

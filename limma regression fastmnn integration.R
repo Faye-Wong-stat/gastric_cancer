@@ -1,10 +1,13 @@
 library(tidyr)
 library(dplyr)
+library(plyr)
 library(Seurat)
 library(patchwork)
 library(reshape2)
 library(pheatmap)
 library(ggplot2)
+library(gridExtra)
+library(grid)
 library(limma)
 library(batchelor)
 library(scran)
@@ -15,41 +18,87 @@ library(scater)
 setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer/early gastric cancer")
 gc <- readRDS("../gc.rds")
 egc.annt <- readRDS("egc.annt.rds")
-
-
+egc.annt.exc78 <- readRDS("egc.annt.exc78.rds")
 
 #limma
-#regress out disease status, linear
-egc.annt@assays$RNA@scale.data <- removeBatchEffect(egc.annt@assays$RNA@data,
-                                                batch=egc.annt@meta.data$disease.status)
-gc@assays$RNA@scale.data <- removeBatchEffect(gc@assays$RNA@data,
-                                                batch=gc@meta.data$disease.status)
+#regress out disease status, sex, and , linear
+# egc.annt@assays$RNA@scale.data <- removeBatchEffect(egc.annt@assays$RNA@data,
+#                                                 batch=egc.annt@meta.data$disease.status)
+# gc@assays$RNA@scale.data <- removeBatchEffect(gc@assays$RNA@data,
+#                                                 batch=gc@meta.data$disease.status)
+
+gc@assays$RNA@data <- removeBatchEffect(gc@assays$RNA@data,
+                                                batch=gc@meta.data$disease.status,
+                                                batch2=gc@meta.data$biopsy)
+
+egc.annt@assays$RNA@data <- removeBatchEffect(egc.annt@assays$RNA@data,
+                                                batch=egc.annt@meta.data$disease.status,
+                                                batch2=egc.annt@meta.data$sex)
+#excluse patient 7&8
+egc.annt.exc78@assays$RNA@data <- removeBatchEffect(egc.annt.exc78@assays$RNA@data,
+                                                batch=egc.annt.exc78@meta.data$disease.status,
+                                                batch2=egc.annt.exc78@meta.data$sex)
 
 #combine reference data with our data
 shared.gene <- intersect(rownames(gc), rownames(egc.annt)) #select genes with var>3000
 gc.new <- gc[shared.gene,]
 egc.annt.new <- egc.annt[shared.gene,]
+gc.new@assays$RNA@scale.data <- t(scale(t(gc.new@assays$RNA@data)))
+egc.annt.new@assays$RNA@scale.data <- t(scale(t(egc.annt.new@assays$RNA@data)))
 
-gc.new@assays$RNA@scale.data <- scale(gc.new@assays$RNA@scale.data)
-egc.annt.new@assays$RNA@scale.data <- scale(egc.annt.new@assays$RNA@scale.data)
+#excluse patient 7&8
+shared.gene <- intersect(rownames(gc), rownames(egc.annt.exc78))
+gc.exc78.new <- gc[shared.gene,]
+egc.annt.exc78.new <- egc.annt.exc78[shared.gene,]
+gc.exc78.new@assays$RNA@scale.data <- t(scale(t(gc.exc78.new@assays$RNA@data)))
+egc.annt.exc78.new@assays$RNA@scale.data <- t(scale(t(egc.annt.exc78.new@assays$RNA@data)))
 
 #do pca and umap
 gc.new <- FindVariableFeatures(gc.new)
+gc.new.hvgs <- VariableFeatures(gc.new)
 gc.new <- RunPCA(gc.new, features=VariableFeatures(gc.new))
-egc.annt.new <- FindVariableFeatures(egc.annt.new)
-egc.annt.new <- RunPCA(egc.annt.new, features=VariableFeatures(egc.annt.new))
 gc.new <- RunUMAP(gc.new, dims=1:50)
-egc.annt.new <- RunUMAP(egc.annt.new, dims=1:50)
 pdf("../integration/regression and integration/umap of gc.pdf")
 DimPlot(gc.new, reduction="umap")
 dev.off()
+
+egc.annt.new <- FindVariableFeatures(egc.annt.new)
+egc.annt.new.hvgs <- VariableFeatures(egc.annt.new)
+egc.annt.new <- RunPCA(egc.annt.new, features=VariableFeatures(egc.annt.new))
+egc.annt.new <- RunUMAP(egc.annt.new, dims=1:50)
 pdf("../integration/regression and integration/umap of egc.pdf")
 DimPlot(egc.annt.new, reduction="umap", group.by="cell.type", label=T, repel=T)
 dev.off()
+pdf("../integration/regression and integration/umap of egc by disease status.pdf")
+DimPlot(egc.annt.new, reduction="umap", group.by="disease.status", label=T, repel=T)
+dev.off()
+
+#excluse patient 7&8
+gc.exc78.new <- FindVariableFeatures(gc.exc78.new)
+gc.exc78.new.hvgs <- VariableFeatures(gc.exc78.new)
+gc.exc78.new <- RunPCA(gc.exc78.new, features=VariableFeatures(gc.exc78.new))
+gc.exc78.new <- RunUMAP(gc.exc78.new, dims=1:50)
+egc.annt.exc78.new <- FindVariableFeatures(egc.annt.exc78.new)
+egc.annt.exc78.new.hvgs <- VariableFeatures(egc.annt.exc78.new)
+egc.annt.exc78.new <- RunPCA(egc.annt.exc78.new,
+                             features=VariableFeatures(egc.annt.exc78.new))
+egc.annt.exc78.new <- RunUMAP(egc.annt.exc78.new, dims=1:50)
+pdf("../integration/regression and integration/umap of gc exclude 7&8.pdf")
+DimPlot(gc.exc78.new, reduction="umap")
+dev.off()
+pdf("../integration/regression and integration/umap of egc exclude 7&8.pdf")
+DimPlot(egc.annt.exc78.new, reduction="umap", group.by="cell.type", label=T, repel=T)
+dev.off()
+pdf("../integration/regression and integration/umap of egc exclude 7&8 by disease status.pdf")
+DimPlot(egc.annt.exc78.new, reduction="umap", group.by="disease.status", label=T, repel=T)
+dev.off()
+
+
 
 gc.combined <- fastMNN(gc=gc.new@assays$RNA@scale.data,
-                    egc=egc.annt.new@assays$RNA@scale.data[rownames(gc.new@assays$RNA@scale.data),])
-gc.combined <- runUMAP(gc.combined, dimred="corrected")
+                    egc=egc.annt.new@assays$RNA@scale.data[
+                    rownames(gc.new@assays$RNA@scale.data),])
+# gc.combined <- runUMAP(gc.combined, dimred="corrected")
 
 gc.new[["cell.type"]] <- NA
 gc.combined$cell.type <- c(gc.new@meta.data[,"cell.type"],
@@ -67,23 +116,31 @@ gc.combined.seurat@assays$RNA@scale.data <- as.matrix(assay(gc.combined,"reconst
 gc.combined.seurat@assays$RNA@data <- cbind(gc.new@assays$RNA@data, egc.annt.new@assays$RNA@data)
 
 #run pca and umap on the merged seurat objects
-gc.combined.seurat <- FindVariableFeatures(gc.combined.seurat)
 gc.combined.seurat <- RunPCA(gc.combined.seurat,
-                            features=VariableFeatures(gc.combined.seurat))
+                            features=intersect(gc.new.hvgs,egc.annt.new.hvgs))
 gc.combined.seurat <- RunUMAP(gc.combined.seurat, dims=1:50)
 pdf("../integration/regression and integration/umap seurat.pdf")
 DimPlot(gc.combined.seurat, reduction="umap", group.by="cell.type", split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
+pdf("../integration/regression and integration/umap seurat by data.pdf")
+DimPlot(gc.combined.seurat, reduction="umap", group.by="orig.ident",
+  label=T, repel=T)
+dev.off()
+pdf("../integration/regression and integration/umap seurat by disease status.pdf", width=14)
+DimPlot(gc.combined.seurat, reduction="umap", group.by="disease.status",
+  split.by="orig.ident",
   label=T, repel=T)
 dev.off()
 
 #plot umap by cluster
 gc.combined.seurat <- FindNeighbors(gc.combined.seurat, k.param=15)
 gc.combined.seurat <- FindClusters(gc.combined.seurat)
-pdf("../integration/regression and integration/umap seurat by cluster.pdf")
+pdf("../integration/regression and integration/umap seurat by cluster.pdf", width=14)
 DimPlot(gc.combined.seurat, reduction="umap", split.by="orig.ident",
   label=T, repel=T)
 dev.off()
-#undifferentiated clusters 0, 3, 5, 8, 9, 21
+#undifferentiated clusters ?
 
 #plot umap with ggplot on the merged seurat objects
 gc.combined.seurat.umap <- gc.combined.seurat[["umap"]]@cell.embeddings
@@ -92,14 +149,69 @@ gc.combined.seurat.umap <- cbind(gc.combined.seurat.umap,
                                 egc.annt.new@meta.data[,c("orig.ident","cell.type")]))
 colnames(gc.combined.seurat.umap)[1:2] <- c("axisa", "axisb")
 
-pdf("../integration/regression and integration/umap seurat by cell type.pdf",
+pdf("../integration/regression and integration/umap seurat reference by cell type.pdf",
     width=30, height=30)
-ggplot(data=gc.combined.seurat.umap, aes(x=axisa, y=axisb)) +
+ggplot(data=gc.combined.seurat.umap[gc.combined.seurat.umap$orig.ident=="egc.data",],
+       aes(x=axisa, y=axisb)) +
   geom_point(data=select(gc.combined.seurat.umap, -cell.type), color="grey", size=0.05) +
   geom_point(aes(color=cell.type), size=0.05) +
   facet_wrap("cell.type") +
   guides(colour = guide_legend(override.aes = list(size=1)))
 dev.off()
+
+
+
+#excluse patient 7&8
+#seurat object exclude patient 7 and 8
+gc.combined.exc78 <- fastMNN(gc=gc.exc78.new@assays$RNA@scale.data,
+                    egc=egc.annt.exc78.new@assays$RNA@scale.data[
+                    rownames(gc.exc78.new@assays$RNA@scale.data),])
+gc.combined.exc78.seurat <- merge(gc.exc78.new, egc.annt.exc78.new)
+gc.combined.exc78.seurat@assays$RNA@scale.data <-
+                              as.matrix(assay(gc.combined.exc78,"reconstructed"))
+gc.combined.exc78.seurat@assays$RNA@data <- cbind(gc.exc78.new@assays$RNA@data,
+                              egc.annt.exc78.new@assays$RNA@data)
+
+gc.combined.exc78.seurat <- RunPCA(gc.combined.exc78.seurat,
+                            features=intersect(gc.exc78.new.hvgs,egc.annt.exc78.new.hvgs))
+gc.combined.exc78.seurat <- RunUMAP(gc.combined.exc78.seurat, dims=1:50)
+gc.combined.exc78.seurat <- FindNeighbors(gc.combined.exc78.seurat, k.param=15)
+gc.combined.exc78.seurat <- FindClusters(gc.combined.exc78.seurat)
+
+pdf("../integration/regression and integration/umap seurat exclude 7&8.pdf")
+DimPlot(gc.combined.exc78.seurat, reduction="umap", group.by="cell.type",
+  split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
+pdf("../integration/regression and integration/umap seurat exclude 7&8 by data.pdf")
+DimPlot(gc.combined.exc78.seurat, reduction="umap", group.by="orig.ident",
+  label=T, repel=T)
+dev.off()
+pdf("../integration/regression and integration/umap seurat exclude 7&8 by disease status.pdf", width=14)
+DimPlot(gc.combined.exc78.seurat, reduction="umap", group.by="disease.status",
+  split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
+pdf("../integration/regression and integration/umap seurat exclude 7&8 by cluster.pdf", width=14)
+DimPlot(gc.combined.exc78.seurat, reduction="umap", split.by="orig.ident",
+  label=T, repel=T)
+dev.off()
+gc.combined.seurat.umap <- gc.combined.exc78.seurat[["umap"]]@cell.embeddings
+gc.combined.seurat.umap <- cbind(gc.combined.seurat.umap,
+                          rbind(gc.exc78.new@meta.data[,c("orig.ident","cell.type")],
+                                egc.annt.exc78.new@meta.data[,c("orig.ident","cell.type")]))
+colnames(gc.combined.seurat.umap)[1:2] <- c("axisa", "axisb")
+
+pdf("../integration/regression and integration/umap seurat reference exclude 7&8 by cell type.pdf",
+    width=30, height=30)
+ggplot(data=gc.combined.seurat.umap[gc.combined.seurat.umap$orig.ident=="egc.data",],
+       aes(x=axisa, y=axisb)) +
+  geom_point(data=select(gc.combined.seurat.umap, -cell.type), color="grey", size=0.05) +
+  geom_point(aes(color=cell.type), size=0.05) +
+  facet_wrap("cell.type") +
+  guides(colour = guide_legend(override.aes = list(size=1)))
+dev.off()
+
 
 
 
@@ -112,6 +224,19 @@ gc.new <- readRDS("../integrated/gc.new.rds")
 egc.annt.new <- readRDS("../integrated/egc.annt.new.rds")
 gc.combined <- readRDS("../integrated/limma.regressed.mnn.integrated.rds")
 gc.combined.seurat <- readRDS("../integrated/limma.regressed.mnn.integrated.seurat.rds")
+
+
+
+saveRDS(gc.exc78.new, "../integrated/gc.exc78.new.rds")
+saveRDS(egc.annt.exc78.new, "../integrated/egc.annt.exc78.new.rds")
+gc.exc78.new <- readRDS("../integrated/gc.exc78.new.rds")
+egc.annt.exc78.new <- readRDS("../integrated/egc.annt.exc78.new.rds")
+
+
+
+pdf("umap by disease status after correction.pdf")
+DimPlot(egc.annt.new, reduction="umap", group.by="disease.status", label=T, repel=T)
+dev.off()
 
 
 

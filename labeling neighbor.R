@@ -41,15 +41,15 @@ setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer/integrated/neighbor/"
 
 gc.combined.seurat <- readRDS("../limma.regressed.mnn.integrated.seurat.rds")
 
-table(gc.combined.seurat[,gc.combined.seurat$orig.ident=="egc.data"]@meta.data$cell.type)
+write.csv(as.data.frame(unclass(table(gc.combined.seurat[,gc.combined.seurat$orig.ident=="egc.data"]@meta.data$cell.type))), "/share/quonlab/workspaces/fangyiwang/gastric cancer/early gastric cancer/cell type number.csv")
 # B cell     Cancer cell      Chief cell              EC      Enterocyte
-#   2158             774              44             994            3364
+#   2119             522              44             961            3193
 # Enteroendocrine      Fibroblast             GMC     Goblet cell      Macrophage
-#   2814            1381            1886             552             397
+#   2629            1362            1771             542             395
 # Mast cell             MSC  Neck-like cell              PC             PMC
-#    227            1302             383            1133           13026
+#    227            1243             375             966           12808
 # SM cell          T cell
-#    279            1618
+#    272            1617
 
 
 gc.scaledata.hvg <- gc.combined.seurat@assays$RNA@scale.data[
@@ -62,6 +62,7 @@ gc.scaledata.hvg <- t(gc.scaledata.hvg)
 egc.scaledata.hvg <- t(egc.scaledata.hvg)
 
 # system.time(cdist(gc.scaledata.hvg[1:2,], egc.scaledata.hvg))
+# dim(gc.scaledata.hvg)
 
 distance.hvg <- cdist(gc.scaledata.hvg, egc.scaledata.hvg)
 
@@ -278,8 +279,116 @@ pdf("umap query neighbor hvg 8.10.pdf")
 DimPlot(subset(gc.combined.seurat, subset=orig.ident=="gcdata"), reduction="umap",
   group.by="neighbor_cell.type_hvg10", label=T, repel=T)
 dev.off()
+#almost 80% of cells are labeled
+saveRDS(gc.combined.seurat,"../limma.regressed.mnn.integrated.neighbor.labeled.seurat.rds")
 
 
+#this is for presentation
+gc.labeled <- gc.combined.seurat[,
+              gc.combined.seurat$orig.ident=="gcdata" &
+              !is.na(gc.combined.seurat$neighbor_cell.type_hvg10)]
+pdf("umap by cell type.pdf")
+DimPlot(gc.labeled, reduction="umap",
+  group.by="neighbor_cell.type_hvg10", label=T, repel=T)
+dev.off()
+pdf("umap by sample.pdf")
+DimPlot(gc.labeled, reduction="umap",
+  group.by="sample")
+dev.off()
+pdf("umap by ethnicity.pdf")
+DimPlot(gc.labeled, reduction="umap",
+  group.by="ethnicity")
+dev.off()
+pdf("umap by biopsy location.pdf")
+DimPlot(gc.labeled, reduction="umap",
+  group.by="biopsy")
+dev.off()
+
+#heatmap celltype by sample
+sample.info <- gc.labeled@meta.data[,c("sample","neighbor_cell.type_hvg10")]
+sample.info <- as.matrix(data.frame(unclass(table(sample.info))))
+sample.info <- apply(sample.info, 1, FUN=function(x){
+  x/sum(x)
+})
+sample.info <- as.matrix(sample.info)
+sample.info <- t(sample.info)
+sample.info <- round(sample.info, 3)
+
+pdf("heatmap sample.pdf", width=25, height=15)
+image(1:ncol(sample.info), 1:nrow(sample.info), t(sample.info), axes=F);
+axis(1, 1:ncol(sample.info), colnames(sample.info));
+axis(2, 1:nrow(sample.info), rownames(sample.info));
+for(x in 1:ncol(sample.info)){
+  for(y in 1:nrow(sample.info)){
+    text(x, y, sample.info[y,x])
+  }
+}
+dev.off()
+
+Idents(gc.labeled) <- gc.labeled$neighbor_cell.type_hvg10
+gc.labeled.markers <- FindAllMarkers(gc.labeled, only.pos = TRUE, min.pct = 0.25,
+                              logfc.threshold = 0.25)
+gc.labeled.markers.5 <- as.data.frame(gc.labeled.markers %>%
+    group_by(cluster) %>%
+    top_n(n = 5, wt = avg_log2FC))
+gc.labeled.markers.2 <- as.data.frame(gc.labeled.markers %>%
+    group_by(cluster) %>%
+    top_n(n = 2, wt = avg_log2FC))
+gc.labeled.markers.1 <- as.data.frame(gc.labeled.markers %>%
+    group_by(cluster) %>%
+    top_n(n = 1, wt = avg_log2FC))
+
+pdf("violin of DEGs.pdf",width=50,height=50)
+VlnPlot(gc.labeled, features = gc.labeled.markers.1$gene)
+dev.off()
+
+Idents(gc.labeled) <- gc.labeled$ethnicity
+gc.labeled.markers.ethnicity <- FindAllMarkers(gc.labeled, only.pos = TRUE, min.pct = 0.25,
+                              logfc.threshold = 0.25)
+gc.labeled.markers.ethnicity.5 <- as.data.frame(gc.labeled.markers.ethnicity %>%
+    group_by(cluster) %>%
+    top_n(n = 5, wt = avg_log2FC))
+
+pdf("violin of DEGs by ethnicity.pdf",width=50,height=50)
+VlnPlot(gc.labeled, features = gc.labeled.markers.ethnicity.5$gene)
+dev.off()
+
+Idents(gc.labeled) <- gc.labeled$biopsy
+gc.labeled.markers.biopsy <- FindAllMarkers(gc.labeled, only.pos = TRUE, min.pct = 0.25,
+                              logfc.threshold = 0.25)
+gc.labeled.markers.biopsy.5 <- as.data.frame(gc.labeled.markers.biopsy %>%
+    group_by(cluster) %>%
+    top_n(n = 5, wt = avg_log2FC))
+
+pdf("violin of DEGs by biopsy.pdf",width=50,height=50)
+VlnPlot(gc.labeled, features = gc.labeled.markers.biopsy.5$gene)
+dev.off()
+
+gc.labeled$disease.status[gc.labeled$disease.status=="MCAGOG"] <- "MCAG"
+Idents(gc.labeled) <- gc.labeled$disease.status
+gc.labeled.markers.disease <- FindAllMarkers(gc.labeled, only.pos = TRUE, min.pct = 0.25,
+                              logfc.threshold = 0.25)
+gc.labeled.markers.disease.5 <- as.data.frame(gc.labeled.markers.disease %>%
+    group_by(cluster) %>%
+    top_n(n = 5, wt = avg_log2FC))
+
+pdf("violin of DEGs by disease.pdf",width=50,height=50)
+VlnPlot(gc.labeled, features = gc.labeled.markers.disease.5$gene)
+dev.off()
+
+
+
+
+#subset on cell types
+#stratify on different levels and see how genes differently express
+
+
+
+
+saveRDS(gc.labeled, "gc.labeled.rds")
+saveRDS(gc.labeled.markers, "gc.labeled.markers.rds")
+gc.labeled <- readRDS("gc.labeled.rds")
+gc.labeled.markers <- readRDS("gc.labeled.markers.rds")
 
 #proportion plot bar plot goes 100%
 

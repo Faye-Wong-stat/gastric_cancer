@@ -22,6 +22,9 @@ egc.annt.new <- readRDS("../integrated/egc.annt.new.rds")
 
 #merge the two data sets as a seurat object
 gc.combined.seurat.har <- merge(gc.new, egc.annt.new)
+gc.combined.seurat.har@assays$RNA@data <- cbind(gc.new@assays$RNA@data,
+                                  egc.annt.new@assays$RNA@data[
+                                              rownames(gc.new@assays$RNA@data),])
 gc.combined.seurat.har@assays$RNA@scale.data <- cbind(gc.new@assays$RNA@scale.data,
                                                   egc.annt.new@assays$RNA@scale.data)
 gc.combined.seurat.har <- FindVariableFeatures(gc.combined.seurat.har)

@@ -1,17 +1,20 @@
 library(tidyr)
 library(dplyr)
+library(plyr)
 library(Seurat)
 library(patchwork)
 library(reshape2)
 library(pheatmap)
 library(ggplot2)
+library(gridExtra)
+library(grid)
 library(limma)
 library(batchelor)
 library(scran)
 library(scater)
 # library(Biocmanager)
 
-setwd("./gastric cancer")
+setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer")
 
 #load our data
 gc.data <- Read10X(data.dir="/share/quonlab/workspaces/fangyiwang/gastric cancer/filtered_feature_bc_matrix/")
@@ -20,14 +23,12 @@ gc <- CreateSeuratObject(counts=gc.data, project="gcdata", min.cells=3, min.feat
 #qc
 gc[["percent.mt"]] <- PercentageFeatureSet(gc, pattern="^MT-")
 gc[["sample"]] <- gsub('[ACGT]+-','',rownames(gc@meta.data))
-pdf("gc_plots/violin plot.pdf")
-VlnPlot(gc, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3) #, group.by = "orig.ident"
-dev.off()
+dim(gc)
+#27144 35775
 # plot1 <- FeatureScatter(gc, feature1="nCount_RNA", feature2="percent.mt")
 # plot2 <- FeatureScatter(gc, feature1="nCount_RNA", feature2="nFeature_RNA")
 # plot1 + plot2
 
-gc <- subset(gc, subset= nFeature_RNA<6000 & nCount_RNA<10000) # why didn't subset on percent mt
 # gc.25 <- subset(gc, subset=nFeature_RNA<6000 & percent.mt<25 & nCount_RNA<10000)
 # dim(gc.25)
 # dim(subset(gc, subset=nFeature_RNA<6000 & nCount_RNA<5000))
@@ -36,13 +37,43 @@ gc <- subset(gc, subset= nFeature_RNA<6000 & nCount_RNA<10000) # why didn't subs
 gc[["disease.status"]] <- NA
 gc[["ethnicity"]] <- NA
 gc[["biopsy"]] <- NA
+gc[["subject"]] <- NA
 gc.patient <- data.frame(sample=1:7,
-                        disease.status=c("NG", "NG", "NG", "NG", "MCAG", "MCAG", "MCAGOG"),
+                        disease.status=c("NG", "NG", "NG", "NG", "MCAG", "MCAG", "MCAG"),
                         ethnicity=c(rep("Hispanic",3), rep("White",3), "Hispanic"),
-                        biopsy=c("antrum", "antrum", "cardia", "antrum", "antrum", "cardia", "antrum")
-                        )
-gc@meta.data[,c("disease.status", "ethnicity", "biopsy")] = gc.patient[gc@meta.data$sample,2:4]
+                        biopsy=c("antrum", "antrum", "cardia", "antrum", "antrum", "cardia", "antrum"),
+                        subject=c(2,3,3,4,6,6,7))
+gc@meta.data[,c("disease.status", "ethnicity", "biopsy","subject")] = gc.patient[gc@meta.data$sample,2:5]
 
+pdf("gc_plots/violin plot before QC.pdf", width=14)
+VlnPlot(gc, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3)
+#, group.by = "orig.ident"
+dev.off()
+pdf("gc_plots/violin plot before QC by disease status.pdf", width=14)
+VlnPlot(gc, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3,
+        group.by = "disease.status")
+dev.off()
+
+# gc.adj <- gc[,((gc$disease.status=="MCAG"&gc$nFeature_RNA<9000) |
+#                 (gc$disease.status=="NG"&gc$nFeature_RNA<8000)) &
+#               ((gc$disease.status=="MCAG"&gc$nCount_RNA<8500) |
+#                 (gc$disease.status=="NG"&gc$nCount_RNA<7500))]
+# pdf("gc_plots/violin plot adjusting.pdf", width=14)
+# VlnPlot(gc.adj,
+#         features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3,
+#         group.by = "disease.status")
+# dev.off()
+
+gc <- gc[,((gc$disease.status=="MCAG"&gc$nFeature_RNA<9000) |
+                (gc$disease.status=="NG"&gc$nFeature_RNA<8000)) &
+              ((gc$disease.status=="MCAG"&gc$nCount_RNA<8500) |
+                (gc$disease.status=="NG"&gc$nCount_RNA<7500))]
+gc <- gc[!rowSums(gc@assays$RNA@counts)==0,]
+dim(gc)
+#26963 29210
+
+# gc <- subset(gc, subset= nFeature_RNA<6000 & nCount_RNA<10000)
+# #why didn't subset on percent mt
 
 #Normalization
 gc <- NormalizeData(gc, normalization.method="LogNormalize", scale.factor=1e6)
@@ -80,7 +111,7 @@ gc <- FindClusters(gc, resolution=0.5)
 # head(Idents(gc),5)
 
 #Nonlinear Dimension Reduction
-gc <- RunUMAP(gc, dims=1:10)
+gc <- RunUMAP(gc, dims=1:50)
 pdf("gc_plots/umap.pdf")
 DimPlot(gc, reduction="umap", label=T)
 dev.off()
@@ -92,7 +123,7 @@ dev.off()
 
 
 #load reference data
-setwd("./early gastric cancer")
+setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer/early gastric cancer")
 temp = list.files(pattern="*.gz")
 data <- list()
 for (i in 1:length(temp)){
@@ -123,18 +154,40 @@ egc <- merge(x=egc.object[[1]],y=c(egc.object[[2]],
                                     egc.object[[12]],
                                     egc.object[[13]]))
 
+egc[["percent.mt"]] <- PercentageFeatureSet(egc, pattern="^MT-")
 egc[["sample"]] <- egc[["orig.ident"]]
 egc[["orig.ident"]] <- "egc.data"
 egc[["disease.status"]] <- gsub("[1234]", "", egc@meta.data$sample)
-egc[["percent.mt"]] <- PercentageFeatureSet(egc, pattern="^MT-")
+dim(egc)
+# 22910 56440
 
-pdf("violin plot.pdf",width=20,height=10)
-VlnPlot(egc, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3, group.by="sample")
-#, group.by = "orig.ident"
+pdf("egc_plots/violin plot before QC.pdf",width=14)
+VlnPlot(egc, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3,
+        group.by="orig.ident")
 dev.off()
-pdf("violin plot mt disease status.pdf")
-VlnPlot(egc, features="percent.mt", group.by="disease.status") #, group.by = "orig.ident"
+pdf("egc_plots/violin plot before QC by disease status.pdf",width=14)
+VlnPlot(egc, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+        group.by="disease.status")
 dev.off()
+
+# egc.adj <- egc[,((egc$disease.status=="EGC"&egc$nFeature_RNA<4000) |
+#                  (egc$disease.status=="IMS"&egc$nFeature_RNA<3700) |
+#                  (egc$disease.status=="CAG"&egc$nFeature_RNA<3000) |
+#                  (egc$disease.status=="NAG"&egc$nFeature_RNA<2500) |
+#                  (egc$disease.status=="IMW"&egc$nFeature_RNA<2000)) &
+#                 ((egc$disease.status%in%c("EGC","IMS")&egc$nCount_RNA<20000) |
+#                  (egc$disease.status=="CAG"&egc$nCount_RNA<12000) |
+#                  (egc$disease.status=="NAG"&egc$nCount_RNA<10000) |
+#                  (egc$disease.status=="IMW"&egc$nCount_RNA<7500)) &
+#                 ((egc$disease.status=="EGC"&egc$percent.mt<75) |
+#                  (egc$disease.status=="IMS"&egc$percent.mt<80) |
+#                  (egc$disease.status=="CAG"&egc$percent.mt<45) |
+#                  (egc$disease.status=="IMW"&egc$percent.mt<50) |
+#                  (egc$disease.status=="NAG"&egc$percent.mt<30))]
+# pdf("egc_plots/violin plot adjusting.pdf",width=14)
+# VlnPlot(egc.adj, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+#         group.by="disease.status")
+# dev.off()
 
 #qc following the procedure in the paper
 #not helpful, don't use
@@ -144,53 +197,92 @@ dev.off()
 #                                         duplicated(cell.names.egc.2, fromLast=T)]
 # egc.2 <- egc.2[, !cell.names.egc.2 %in% duplicated.barcodes]
 
+egc <- egc[,((egc$disease.status=="EGC"&egc$nFeature_RNA<4000) |
+                 (egc$disease.status=="IMS"&egc$nFeature_RNA<3700) |
+                 (egc$disease.status=="CAG"&egc$nFeature_RNA<3000) |
+                 (egc$disease.status=="NAG"&egc$nFeature_RNA<2500) |
+                 (egc$disease.status=="IMW"&egc$nFeature_RNA<2000)) &
+                ((egc$disease.status%in%c("EGC","IMS")&egc$nCount_RNA<20000) |
+                 (egc$disease.status=="CAG"&egc$nCount_RNA<12000) |
+                 (egc$disease.status=="NAG"&egc$nCount_RNA<10000) |
+                 (egc$disease.status=="IMW"&egc$nCount_RNA<7500)) &
+                ((egc$disease.status=="EGC"&egc$percent.mt<75) |
+                 (egc$disease.status=="IMS"&egc$percent.mt<80) |
+                 (egc$disease.status=="CAG"&egc$percent.mt<45) |
+                 (egc$disease.status=="IMW"&egc$percent.mt<50) |
+                 (egc$disease.status=="NAG"&egc$percent.mt<30))]
+egc <- egc[!rowSums(egc@assays$RNA@counts)==0,]
+dim(egc)
+#22904 53727
+
 #annotation
 annt <- read.csv("annotation.csv")
 annt$X <- gsub("-", ".", annt$X)
 rownames(annt) <- annt$X
 annt <- annt[,-1]
 
-patient.annt <- data.frame(sample=project.names, patient=c(1,2,9,3,4,4,5,6,7,7,8,8,8))
+egc.annt <- egc
 
-egc.annt <- egc[,colnames(egc) %in% rownames(annt)]
-egc.annt[["cell.type"]] <- annt$cell.type
+patient.annt <- data.frame(sample=project.names,
+                            age=c(58,56,62,51,62,62,63,48,rep(68,2),rep(67,3)),
+                            sex=c("m","f","m","m","f","f","m","f",rep("m",5)),
+                            Hpylori=c(rep("N",6),"P","N",rep("P",2),rep("N",3)),
+                            patient=c(1,2,9,3,4,4,5,6,7,7,8,8,8))
+
+egc.annt[["age"]] <- NA
+egc.annt[["sex"]] <- NA
+egc.annt[["Hpylori"]] <- NA
 egc.annt[["subject"]] <- NA
 for(i in 1:dim(egc.annt)[2]){
-  egc.annt@meta.data$subject[i] = patient.annt[which(patient.annt$sample==egc.annt@meta.data$sample[i]),2]
+  egc.annt@meta.data[i,c("age","sex","Hpylori","subject")] = patient.annt[which(patient.annt$sample==egc.annt@meta.data$sample[i]),2:5]
 }
-egc.annt[["sample"]] <- paste(egc.annt@meta.data$sample, egc.annt@meta.data$subject, sep=".")
-pdf("violin plot2.pdf",width=20,height=10)
-VlnPlot(egc.annt, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3, group.by="sample") #, group.by = "orig.ident"
-dev.off()
+# egc.annt[["sample"]] <- paste(egc.annt@meta.data$sample, egc.annt@meta.data$subject, sep=".")
 
-#heatmap celltype by sample
-sample.info <- egc.annt@meta.data[,c("sample","cell.type")]
-sample.info <- as.matrix(data.frame(unclass(table(sample.info))))
-sample.info <- apply(sample.info, 1, FUN=function(x){
-  x/sum(x)
-})
-sample.info <- as.matrix(sample.info)
-sample.info <- t(sample.info)
-sample.info <- round(sample.info, 3)
+egc.annt[["cell.type"]] <- NA
+egc.annt$cell.type <- annt[colnames(egc.annt),2]
 
-pdf("heatmap sample.pdf", width=25, height=15)
-image(1:ncol(sample.info), 1:nrow(sample.info), t(sample.info), axes=F);
-axis(1, 1:ncol(sample.info), colnames(sample.info));
-axis(2, 1:nrow(sample.info), rownames(sample.info));
-for(x in 1:ncol(sample.info)){
-  for(y in 1:nrow(sample.info)){
-    text(x, y, sample.info[y,x])
-  }
-}
-dev.off()
+dim(egc.annt)
+#22904 53727
 
-pdf("violin plot2 mt disease status.pdf")
-VlnPlot(egc.annt, features="percent.mt", group.by="disease.status") #, group.by = "orig.ident"
-dev.off()
 
-pdf("violin plot2 mt cell type.pdf")
-VlnPlot(egc.annt, features="percent.mt", group.by="cell.type") #, group.by = "orig.ident"
-dev.off()
+
+# pdf("egc_plots/violin plot2 before QC.pdf",width=14)
+# VlnPlot(egc.annt, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3,
+#         group.by="orig.ident")
+# dev.off()
+# pdf("egc_plots/violin plot2 before QC by disease status.pdf",width=14)
+# VlnPlot(egc.annt, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3,
+#         group.by="disease.status")
+# dev.off()
+
+# #heatmap celltype by sample
+# sample.info <- egc.annt@meta.data[,c("sample","cell.type")]
+# sample.info <- as.matrix(data.frame(unclass(table(sample.info))))
+# sample.info <- apply(sample.info, 1, FUN=function(x){
+#   x/sum(x)
+# })
+# sample.info <- as.matrix(sample.info)
+# sample.info <- t(sample.info)
+# sample.info <- round(sample.info, 3)
+#
+# pdf("heatmap sample.pdf", width=25, height=15)
+# image(1:ncol(sample.info), 1:nrow(sample.info), t(sample.info), axes=F);
+# axis(1, 1:ncol(sample.info), colnames(sample.info));
+# axis(2, 1:nrow(sample.info), rownames(sample.info));
+# for(x in 1:ncol(sample.info)){
+#   for(y in 1:nrow(sample.info)){
+#     text(x, y, sample.info[y,x])
+#   }
+# }
+# dev.off()
+
+# pdf("violin plot2 mt disease status.pdf")
+# VlnPlot(egc.annt, features="percent.mt", group.by="disease.status") #, group.by = "orig.ident"
+# dev.off()
+#
+# pdf("violin plot2 mt cell type.pdf")
+# VlnPlot(egc.annt, features="percent.mt", group.by="cell.type") #, group.by = "orig.ident"
+# dev.off()
 
 egc.annt <- NormalizeData(egc.annt, normalization.method="LogNormalize", scale.factor=1e6)
 egc.annt <- FindVariableFeatures(egc.annt, selection.method="vst", nfeatures=2000)
@@ -203,51 +295,186 @@ dev.off()
 
 # egc.annt <- FindNeighbors(egc.annt, dims=1:11)
 # egc.annt <- FindClusters(egc.annt, resolution=0.5)
-egc.annt <- RunUMAP(egc.annt, dims=1:15)
+egc.annt <- RunUMAP(egc.annt, dims=1:50)
 # egc.annt <- RunTSNE(egc.annt, dims=1:11) #, check_duplicates=F # didn't run this
 
-pdf("pca.pdf")
-DimPlot(egc.annt, reduction="pca")
-dev.off()
-pdf("umap.pdf")
+pdf("egc_plots/umap.pdf")
 DimPlot(egc.annt, reduction="umap")
 dev.off()
-# pdf("tsne.pdf")
-# DimPlot(egc.annt, reduction="tsne")
-# dev.off()
-
-pdf("pca by patient.pdf")
-DimPlot(egc.annt, reduction="pca", group.by="subject", label=T, repel=T)
-dev.off()
-pdf("umap by patient.pdf")
+pdf("egc_plots/umap by patient.pdf")
 DimPlot(egc.annt, reduction="umap", group.by="subject", label=T, repel=T)
 dev.off()
-# pdf("tsne by patient.pdf")
-# DimPlot(egc.annt, reduction="tsne", group.by="subject", label=T, repel=T)
-# dev.off()
-
-pdf("pca by disease status.pdf")
-DimPlot(egc.annt, reduction="pca", group.by="disease.status", label=T, repel=T)
-dev.off()
-pdf("umap by disease status.pdf")
+pdf("egc_plots/umap by disease status.pdf")
 DimPlot(egc.annt, reduction="umap", group.by="disease.status", label=T, repel=T)
 dev.off()
-# pdf("tsne by disease.status.pdf")
-# DimPlot(egc.annt, reduction="tsne", group.by="disease.status", label=T, repel=T)
-# dev.off()
-
-pdf("pca by cell type.pdf")
-DimPlot(egc.annt, reduction="pca", group.by="cell.type", label=T, repel=T)
-dev.off()
-pdf("umap by cell type.pdf")
+pdf("egc_plots/umap by cell type.pdf")
 DimPlot(egc.annt, reduction="umap", group.by="cell.type", label=T, repel=T)
 dev.off()
-# pdf("tsne by cell type.pdf")
-# DimPlot(egc.annt, reduction="tsne", group.by="cell.type", label=T, repel=T)
+
+
+
+#exclude patient 7 and 8
+egc.annt.exc78 <- subset(egc.annt, subset=subject%in%c(1:6,9))
+egc.annt.exc78 <- egc.annt.exc78[!rowSums(egc.annt.exc78@assays$RNA@counts)==0,]
+dim(egc.annt.exc78)
+#22597 33210
+
+pdf("egc_plots/violin plot exclude 7&8.pdf",width=14)
+VlnPlot(egc.annt.exc78, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+        group.by="disease.status")
+dev.off()
+
+egc.annt.exc78 <- NormalizeData(egc.annt.exc78, normalization.method="LogNormalize", scale.factor=1e6)
+egc.annt.exc78 <- FindVariableFeatures(egc.annt.exc78, selection.method="vst", nfeatures=2000)
+egc.annt.exc78 <- ScaleData(egc.annt.exc78, features=rownames(egc.annt.exc78))
+egc.annt.exc78 <- RunPCA(egc.annt.exc78, features=VariableFeatures(object=egc.annt.exc78))
+egc.annt.exc78 <- RunUMAP(egc.annt.exc78, dims=1:50)
+pdf("egc_plots/umap exclude 7&8.pdf")
+DimPlot(egc.annt.exc78, reduction="umap")
+dev.off()
+pdf("egc_plots/umap by patient exclude 7&8.pdf")
+DimPlot(egc.annt.exc78, reduction="umap", group.by="subject", label=T, repel=T)
+dev.off()
+pdf("egc_plots/umap by disease status exclude 7&8.pdf")
+DimPlot(egc.annt.exc78, reduction="umap", group.by="disease.status", label=T, repel=T)
+dev.off()
+pdf("egc_plots/umap by cell type exclude 7&8.pdf")
+DimPlot(egc.annt.exc78, reduction="umap", group.by="cell.type", label=T, repel=T)
+dev.off()
+
+
+
+
+# pdf("pca.pdf")
+# DimPlot(egc.annt, reduction="pca")
 # dev.off()
+# pdf("umap.pdf")
+# DimPlot(egc.annt, reduction="umap")
+# dev.off()
+# # pdf("tsne.pdf")
+# # DimPlot(egc.annt, reduction="tsne")
+# # dev.off()
+#
+# pdf("pca by patient.pdf")
+# DimPlot(egc.annt, reduction="pca", group.by="subject", label=T, repel=T)
+# dev.off()
+# pdf("umap by patient.pdf")
+# DimPlot(egc.annt, reduction="umap", group.by="subject", label=T, repel=T)
+# dev.off()
+# # pdf("tsne by patient.pdf")
+# # DimPlot(egc.annt, reduction="tsne", group.by="subject", label=T, repel=T)
+# # dev.off()
+#
+# pdf("pca by disease status.pdf")
+# DimPlot(egc.annt, reduction="pca", group.by="disease.status", label=T, repel=T)
+# dev.off()
+# pdf("umap by disease status.pdf")
+# DimPlot(egc.annt, reduction="umap", group.by="disease.status", label=T, repel=T)
+# dev.off()
+# # pdf("tsne by disease.status.pdf")
+# # DimPlot(egc.annt, reduction="tsne", group.by="disease.status", label=T, repel=T)
+# # dev.off()
+#
+# pdf("pca by cell type.pdf")
+# DimPlot(egc.annt, reduction="pca", group.by="cell.type", label=T, repel=T)
+# dev.off()
+# pdf("umap by cell type.pdf")
+# DimPlot(egc.annt, reduction="umap", group.by="cell.type", label=T, repel=T)
+# dev.off()
+# # pdf("tsne by cell type.pdf")
+# # DimPlot(egc.annt, reduction="tsne", group.by="cell.type", label=T, repel=T)
+# # dev.off()
 
 saveRDS(gc, "../gc.rds")
 saveRDS(egc.annt, "egc.annt.rds")
+saveRDS(egc.annt.exc78, "egc.annt.exc78.rds")
+
+gc <- readRDS("../gc.rds")
+egc.annt <- readRDS("egc.annt.rds")
+egc.annt.exc78 <- readRDS("egc.annt.exc78.rds")
+
+
+
+#plotting for presentation
+# pdf("violin plot.pdf",width=20,height=10)
+# VlnPlot(egc.annt, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3,
+#         group.by="orig.ident") #, group.by = "orig.ident"
+# dev.off()
+# pdf("violin plot mt disease status.pdf")
+# VlnPlot(egc.annt, features="percent.mt", group.by="disease.status")
+# dev.off()
+
+setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer/gc_plots")
+gc.heatmap <- gc@meta.data[,c("sample","disease.status","ethnicity","biopsy","subject")]
+gc.heatmap$sample <- as.character(gc.heatmap$sample)
+gc.heatmap$subject <- as.character(gc.heatmap$subject)
+gc.heatmap <- plyr::count(gc.heatmap)
+gc.heatmap <- gc.heatmap[order(gc.heatmap$freq,decreasing=T),]
+rownames(gc.heatmap) <- 1:7
+
+gc.heatmap.trim <- gc.heatmap
+gc.heatmap.trim <- gc.heatmap.trim[,2:4]
+vector.0 <- gc.heatmap.trim[1,]
+# vector.1 <- c()
+# for (i in 1:length(vector.0)){
+#   vector.1[i] <- gc.heatmap.trim[gc.heatmap.trim[,i]!=vector.0[i],i][1]
+# }
+gc.heatmap.trim <- as.data.frame(apply(gc.heatmap.trim,2,FUN=function(x){ifelse(x==x[1],1,0)}))
+rownames(gc.heatmap.trim) <- gc.heatmap$sample
+gc.heatmap.trim$sample <- rownames(gc.heatmap.trim)
+gc.heatmap.trim <- gather(gc.heatmap.trim,key="y",value="bi",disease.status:biopsy)
+ordered <- gc.heatmap$sample
+
+plot1 <- ggplot(gc.heatmap, aes(x=reorder(sample,-freq), y=freq)) +
+  geom_bar(stat="identity") +
+  xlab("sample") + ylab("cell_counts") + coord_flip() +
+  theme(axis.text.y  = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank(),)
+
+plot2 <- ggplot(gc.heatmap.trim,
+                aes(x=y,y=factor(sample,levels=ordered),fill=as.logical(bi))) +
+         scale_x_discrete(labels=vector.0) +
+         xlab("") + ylab("sample") + guides(fill=guide_legend(title="")) +
+         geom_tile() + theme(legend.position="left")
+pdf("descriptive analysis.pdf",width=14)
+grid.arrange(plot2,plot1,ncol=2)
+# grid.draw(rbind(ggplotGrob(plot1),ggplotGrob(plot2), size="first"))
+dev.off()
+
+setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer/early gastric cancer/egc_plots")
+egc.annt.heatmap <- egc.annt@meta.data[,c("sample","sex","Hpylori","subject")]
+egc.annt.heatmap$subject <- as.character(egc.annt.heatmap$subject)
+egc.annt.heatmap <- plyr::count(egc.annt.heatmap)
+egc.annt.heatmap <- egc.annt.heatmap[order(egc.annt.heatmap$freq,decreasing=T),]
+rownames(egc.annt.heatmap) <- 1:13
+
+egc.annt.heatmap.trim <- egc.annt.heatmap
+egc.annt.heatmap.trim <- egc.annt.heatmap.trim[,2:3]
+vector.0 <- egc.annt.heatmap.trim[1,]
+
+egc.annt.heatmap.trim <- as.data.frame(apply(egc.annt.heatmap.trim,2,FUN=function(x){ifelse(x==x[1],0,1)}))
+rownames(egc.annt.heatmap.trim) <- egc.annt.heatmap$sample
+egc.annt.heatmap.trim$sample <- rownames(egc.annt.heatmap.trim)
+egc.annt.heatmap.trim <- gather(egc.annt.heatmap.trim,key="y",value="bi",sex:Hpylori)
+ordered <- egc.annt.heatmap$sample
+
+plot1 <- ggplot(egc.annt.heatmap, aes(x=reorder(sample,-freq), y=freq)) +
+  geom_bar(stat="identity") +
+  xlab("sample") + ylab("cell_counts") + coord_flip() +
+  theme(axis.text.y  = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank(),)
+
+plot2 <- ggplot(egc.annt.heatmap.trim,
+                aes(x=y,y=factor(sample,levels=ordered),fill=as.logical(bi))) +
+         scale_x_discrete(labels=c("H.pylori Infection","Male")) +
+         xlab("") + ylab("sample") + guides(fill=guide_legend(title="")) +
+         geom_tile() + theme(legend.position="left")
+pdf("descriptive analysis.pdf",width=14)
+grid.arrange(plot2,plot1,ncol=2)
+# grid.draw(rbind(ggplotGrob(plot1),ggplotGrob(plot2), size="first"))
+dev.off()
 
 #regressing out the disease status, non-linear
 #don't use
