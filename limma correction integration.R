@@ -26,17 +26,20 @@ gc.annt.combined.limma <- merge(gc.new, egc.annt.new)
 gc.annt.combined.limma@assays$RNA@data <- cbind(gc.new@assays$RNA@data,
                                   egc.annt.new@assays$RNA@data[
                                               rownames(gc.new@assays$RNA@data),])
-gc.annt.combined.limma@assays$RNA@scale.data <- cbind(gc.new@assays$RNA@scale.data,
-                                  egc.annt.new@assays$RNA@scale.data[
-                                              rownames(gc.new@assays$RNA@scale.data),])
+# gc.annt.combined.limma@assays$RNA@scale.data <- cbind(gc.new@assays$RNA@scale.data,
+#                                   egc.annt.new@assays$RNA@scale.data[
+#                                               rownames(gc.new@assays$RNA@scale.data),])
 
 #regress out dataset difference
 gc.annt.combined.limma@assays$RNA@data <- removeBatchEffect(gc.annt.combined.limma@assays$RNA@data,
                   batch=gc.annt.combined.limma@meta.data$orig.ident)
 
+gc.annt.combined.limma@assays$RNA@scale.data <- t(scale(t(gc.annt.combined.limma@assays$RNA@data)))
+
 # gc.annt.combined.limma <- FindVariableFeatures(gc.annt.combined.limma, nfeatures=2000)
 gc.annt.combined.limma <- RunPCA(gc.annt.combined.limma, npcs=40, verbose=F,
-                                feature=rownames(gc.annt.combined.limma))
+                                feature=intersect(VariableFeatures(gc.new),
+                                                  VariableFeatures(egc.annt.new)))
 gc.annt.combined.limma <- RunUMAP(gc.annt.combined.limma, reduction="pca", dims=1:40)
 
 # pdf("../integration/umap integrated limma.pdf", width=25,height=15)
@@ -49,10 +52,10 @@ gc.annt.combined.limma <- RunUMAP(gc.annt.combined.limma, reduction="pca", dims=
 # p1+p2
 # dev.off()
 
-pdf("../integration/umap integrated limma test.pdf", width=15,height=15)
+pdf("../integration/umap integrated limma test.pdf")
 DimPlot(gc.annt.combined.limma, reduction="umap", group.by="orig.ident")
 dev.off()
-pdf("../integration/umap integrated limma.pdf", width=15,height=15)
+pdf("../integration/umap integrated limma.pdf")
 DimPlot(gc.annt.combined.limma, reduction="umap", group.by="cell.type", split.by="orig.ident", label=T, repel=T)
 dev.off()
 

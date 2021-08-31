@@ -58,11 +58,11 @@ dev.off()
 #                 (gc$disease.status=="NG"&gc$nFeature_RNA<8000)) &
 #               ((gc$disease.status=="MCAG"&gc$nCount_RNA<8500) |
 #                 (gc$disease.status=="NG"&gc$nCount_RNA<7500))]
-# pdf("gc_plots/violin plot adjusting.pdf", width=14)
-# VlnPlot(gc.adj,
-#         features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3,
-#         group.by = "disease.status")
-# dev.off()
+pdf("gc_plots/violin plot adjusting.pdf", width=14)
+VlnPlot(gc.adj,
+        features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3,
+        group.by = "disease.status")
+dev.off()
 
 gc <- gc[,((gc$disease.status=="MCAG"&gc$nFeature_RNA<9000) |
                 (gc$disease.status=="NG"&gc$nFeature_RNA<8000)) &
@@ -255,34 +255,39 @@ dim(egc.annt)
 #         group.by="disease.status")
 # dev.off()
 
-# #heatmap celltype by sample
-# sample.info <- egc.annt@meta.data[,c("sample","cell.type")]
-# sample.info <- as.matrix(data.frame(unclass(table(sample.info))))
-# sample.info <- apply(sample.info, 1, FUN=function(x){
-#   x/sum(x)
-# })
-# sample.info <- as.matrix(sample.info)
-# sample.info <- t(sample.info)
-# sample.info <- round(sample.info, 3)
-#
-# pdf("heatmap sample.pdf", width=25, height=15)
-# image(1:ncol(sample.info), 1:nrow(sample.info), t(sample.info), axes=F);
-# axis(1, 1:ncol(sample.info), colnames(sample.info));
-# axis(2, 1:nrow(sample.info), rownames(sample.info));
-# for(x in 1:ncol(sample.info)){
-#   for(y in 1:nrow(sample.info)){
-#     text(x, y, sample.info[y,x])
-#   }
-# }
-# dev.off()
+#heatmap celltype by sample
+sample.info <- egc.annt@meta.data[,c("sample","cell.type")] #!is.na(egc.annt@meta.data$cell.type)
+sample.info$cell.type[is.na(sample.info$cell.type)] <- "NA"
+sample.info <- as.matrix(data.frame(unclass(table(sample.info))))
+sample.info <- apply(sample.info, 1, FUN=function(x){
+  x/sum(x)
+})
+sample.info <- as.matrix(sample.info)
+sample.info <- t(sample.info)
+sample.info <- round(sample.info, 3)
+
+pdf("egc_plots/heatmap sample.pdf",width=14,height=14)
+image(1:ncol(sample.info), 1:nrow(sample.info), t(sample.info), axes=F,
+      xlab="cell type", ylab="sample");
+axis(1, 1:ncol(sample.info), labels=F);
+axis(2, 1:nrow(sample.info), rownames(sample.info), las=2);
+for(x in 1:ncol(sample.info)){
+  for(y in 1:nrow(sample.info)){
+    text(x, y, sample.info[y,x])
+  }
+}
+text(x=1:ncol(sample.info), y=par("usr")[3]-0.45, xpd=NA,
+  labels=colnames(sample.info),srt=25)
+dev.off()
 
 # pdf("violin plot2 mt disease status.pdf")
 # VlnPlot(egc.annt, features="percent.mt", group.by="disease.status") #, group.by = "orig.ident"
 # dev.off()
 #
-# pdf("violin plot2 mt cell type.pdf")
-# VlnPlot(egc.annt, features="percent.mt", group.by="cell.type") #, group.by = "orig.ident"
-# dev.off()
+pdf("egc_plots/violin plot2 mt cell type.pdf")
+VlnPlot(egc.annt[,!is.na(egc.annt$cell.type)],
+        features="percent.mt", group.by="cell.type") #, group.by = "orig.ident"
+dev.off()
 
 egc.annt <- NormalizeData(egc.annt, normalization.method="LogNormalize", scale.factor=1e6)
 egc.annt <- FindVariableFeatures(egc.annt, selection.method="vst", nfeatures=2000)

@@ -172,6 +172,8 @@ gc.combined.exc78.seurat@assays$RNA@scale.data <-
 gc.combined.exc78.seurat@assays$RNA@data <- cbind(gc.exc78.new@assays$RNA@data,
                               egc.annt.exc78.new@assays$RNA@data)
 
+gc.combined.exc78.seurat <- FindVariableFeatures(gc.combined.exc78.seurat,
+                                                 selection.method="vst")
 gc.combined.exc78.seurat <- RunPCA(gc.combined.exc78.seurat,
                             features=intersect(gc.exc78.new.hvgs,egc.annt.exc78.new.hvgs))
 gc.combined.exc78.seurat <- RunUMAP(gc.combined.exc78.seurat, dims=1:50)
@@ -196,6 +198,9 @@ pdf("../integration/regression and integration/umap seurat exclude 7&8 by cluste
 DimPlot(gc.combined.exc78.seurat, reduction="umap", split.by="orig.ident",
   label=T, repel=T)
 dev.off()
+
+
+gc.exc78.new[["cell.type"]] <- NA
 gc.combined.seurat.umap <- gc.combined.exc78.seurat[["umap"]]@cell.embeddings
 gc.combined.seurat.umap <- cbind(gc.combined.seurat.umap,
                           rbind(gc.exc78.new@meta.data[,c("orig.ident","cell.type")],
@@ -229,6 +234,7 @@ gc.combined.seurat <- readRDS("../integrated/limma.regressed.mnn.integrated.seur
 
 saveRDS(gc.exc78.new, "../integrated/gc.exc78.new.rds")
 saveRDS(egc.annt.exc78.new, "../integrated/egc.annt.exc78.new.rds")
+saveRDS(gc.combined.exc78.seurat, "../integrated/limma.regressed.mnn.integrated.exc78.seurat.rds")
 gc.exc78.new <- readRDS("../integrated/gc.exc78.new.rds")
 egc.annt.exc78.new <- readRDS("../integrated/egc.annt.exc78.new.rds")
 

@@ -15,3 +15,5 @@ library(scater)
 # library(Biocmanager)
 
 setwd("/share/quonlab/workspaces/fangyiwang/gastric cancer/upper gastrointestinal tract")
+
+ugi.data <- read.delim("data_CellReports.tsv.gz")
